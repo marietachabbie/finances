@@ -1,0 +1,158 @@
+const readline = require('readline');
+const fs = require('fs');
+const { getCurrentMonth, getPreviousMonth } = require('./time')
+
+const plan = {
+  YOUR_GOAL: YOUR_PREFERRED_AMOUNT,
+  YOUR_GOAL: YOUR_PREFERRED_AMOUNT,
+  YOUR_GOAL: YOUR_PREFERRED_AMOUNT,
+}
+
+const readLineAsync = (message) => {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  return new Promise((resolve, reject) => {
+    rl.question(message, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  })
+  .catch(error => {
+    console.log(`Error while getting input: ${error.message}`)
+  })
+};
+
+const finalizeAndStartNewMonth = async function() {
+  return new Promise((resolve, reject) => {
+    const previousMonth = getPreviousMonth();
+    const currentMonth = getCurrentMonth();
+    fs.readFile(`${previousMonth}.json`, (error, data) => {
+      if (error) { reject(error) };
+      
+      const prevMonthJson = JSON.parse(data);
+      const currentMonthJson = [];
+      const newSpending = {};
+
+      for(let thing in plan) {
+        let final = 0;
+        prevMonthJson.forEach(groupOfSpendings => {
+          const amount = groupOfSpendings[thing];
+          if (thing in groupOfSpendings) {
+            final += parseInt(amount) + parseInt(plan[thing]);
+          }
+        });
+        newSpending[thing] = final;
+      };
+      
+      currentMonthJson.push(newSpending);
+      calculateFinalResult(currentMonthJson);
+
+      fs.writeFile(`${currentMonth}.json`, JSON.stringify(currentMonthJson), (error, data) => {
+        if (error) { reject(error) };
+      })
+    })
+
+    console.log(`Successfully added data to ${currentMonth}.json`);
+    resolve();
+  })
+  .catch((error) => console.log(`Error while reading | writing to the file: ${error.message}`))
+}
+
+const calculateFinalResult = (jsonData) => {
+  const currentMonth = getCurrentMonth();
+  const result = {};
+  for (let thing in plan) {
+    for (let obj of jsonData) {
+      if (thing in obj) {
+        if (!(thing in result)) {
+          result[thing] = 0;
+        }
+        result[thing] += parseInt(obj[thing]);
+      }
+    }
+  }
+
+  fs.writeFile(`${currentMonth}_remaining.json`, JSON.stringify(result), (error, data) => {
+    if (error) { reject(error) };
+  })
+
+  console.log(`Successfully calculated and added remainings to ${currentMonth}_remaining.json`);
+}
+
+const addNewdData = async function(groupOfSpendings, action) {
+  const newSpending = {};
+  for (let pair of groupOfSpendings) {
+    const keyValue = pair.split('=');
+    newSpending[keyValue[0]] = action == '-' ? `-${keyValue[1]}` : parseInt(keyValue[1]);
+  }
+
+  return new Promise((resolve, reject) => {
+    const currentMonth = getCurrentMonth();
+    fs.readFile(`${currentMonth}.json`, (error, data) => {
+      if (error) { reject(error) };
+
+      const currentJson = JSON.parse(data);
+      currentJson.push(newSpending);
+      calculateFinalResult(currentJson);
+
+      fs.writeFile(`${currentMonth}.json`, JSON.stringify(currentJson), (error, data) => {
+        if (error) { reject(error) };
+      })
+
+      console.log(`Successfully added data to ${currentMonth}.json`);
+      resolve();
+    })
+  })
+  .catch((error) => console.log(`Error while reading | writing to the file: ${error.message}`))
+}
+
+const readData = async function (filePath) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filePath, (error, data) => {
+      if (error) { reject(error) }
+
+      const json = JSON.parse(data);
+      console.table(json);
+      resolve();
+    })
+  })
+  .catch(error => {
+    console.log(`Error while reading ${filePath}: ${error.message}`);
+  })
+}
+
+const readSpecificData = async function(thing) {
+  return new Promise((resolve, reject) => {
+    let remaining = 0;
+    const result = [];
+    const currentMonth = getCurrentMonth();
+    fs.readFile(`${currentMonth}.json`, (error, data) => {
+      if (error) { reject(error) };
+
+      const dataJson = JSON.parse(data);
+      for (let spendings of dataJson) {
+        if (thing in spendings) {
+          const amount = parseInt(spendings[thing]);
+          result.push(amount);
+          remaining += amount;
+        }
+      }
+
+      result.push(remaining);
+      console.table(result);
+      resolve();
+    })
+  })
+  .catch((error) => console.log(`Error while reading the file: ${error.message}`))
+}
+
+ module.exports = {
+  plan,
+  readLineAsync,
+  finalizeAndStartNewMonth,
+  addNewdData,
+  readData,
+  readSpecificData,
+ }
