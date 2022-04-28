@@ -1,6 +1,6 @@
 const readline = require('readline');
 const fs = require('fs');
-const { getCurrentMonth, getPreviousMonth } = require('./time')
+const { getCurrentMonth, getPreviousMonth } = require('./time');
 
 const plan = {
   YOUR_GOAL: YOUR_PREFERRED_AMOUNT,
@@ -63,16 +63,22 @@ const finalizeAndStartNewMonth = async function() {
 const calculateFinalResult = (jsonData) => {
   const currentMonth = getCurrentMonth();
   const result = {};
+  let sum = 0; let savings = 0;
   for (let thing in plan) {
     for (let obj of jsonData) {
+      if (thing === 'savings' && obj[thing]) {
+        savings += parseInt(obj[thing]);
+      }
       if (thing in obj) {
         if (!(thing in result)) {
           result[thing] = 0;
         }
         result[thing] += parseInt(obj[thing]);
+        sum += parseInt(obj[thing]);
       }
     }
   }
+  result.total = sum - savings;
 
   fs.writeFile(`${currentMonth}_remaining.json`, JSON.stringify(result), (error, data) => {
     if (error) { reject(error) };
