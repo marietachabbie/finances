@@ -28,22 +28,20 @@ const finalizeAndStartNewMonth = async function() {
   return new Promise((resolve, reject) => {
     const previousMonth = getPreviousMonth();
     const currentMonth = getCurrentMonth();
-    fs.readFile(`${previousMonth}.json`, (error, data) => {
+    fs.readFile(`${previousMonth}_remaining.json`, (error, data) => {
       if (error) { reject(error) };
       
-      const prevMonthJson = JSON.parse(data);
+      const groupOfSpendings = JSON.parse(data);
       const currentMonthJson = [];
       const newSpending = {};
 
       for(let thing in plan) {
         let final = 0;
-        prevMonthJson.forEach(groupOfSpendings => {
+        if (thing in groupOfSpendings) {
           const amount = groupOfSpendings[thing];
-          if (thing in groupOfSpendings) {
-            final += parseInt(amount) + parseInt(plan[thing]);
-          }
-        });
-        newSpending[thing] = final;
+          final += parseInt(amount);
+        }
+        newSpending[thing] = final + parseInt(plan[thing]);
       };
       
       currentMonthJson.push(newSpending);
