@@ -89,7 +89,7 @@ const addNewdData = async function(groupOfSpendings, action) {
   const newSpending = {};
   for (let pair of groupOfSpendings) {
     const keyValue = pair.split('=');
-    newSpending[keyValue[0]] = action == '-' ? `-${keyValue[1]}` : parseInt(keyValue[1]);
+    newSpending[keyValue[0]] = action == '-' ? - parseInt(keyValue[1]) : parseInt(keyValue[1]);
   }
 
   return new Promise((resolve, reject) => {
@@ -113,11 +113,23 @@ const addNewdData = async function(groupOfSpendings, action) {
 }
 
 const readData = async function (filePath) {
+  let remaining = {};
+  if (!filePath.endsWith('_remaining.json')) {
+    const currentMonth = getCurrentMonth();
+    const data = fs.readFileSync(`${currentMonth}_remaining.json`);
+    remaining = JSON.parse(data);
+    delete remaining.total
+  }
+
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, (error, data) => {
       if (error) { reject(error) }
 
       const json = JSON.parse(data);
+      // temporary solution
+      if (Array.isArray(json)) {
+        json.push(remaining);
+      }
       console.table(json);
       resolve();
     })
